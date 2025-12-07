@@ -4,7 +4,9 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT,
   role TEXT CHECK(role IN ('client','creator','admin')) NOT NULL,
   balance_cents INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  display_name TEXT,
+  photo_file_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -30,6 +32,19 @@ CREATE TABLE IF NOT EXISTS withdrawals (
   created_at TEXT NOT NULL,
   processed_at TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  creator_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  type TEXT,
+  price_cents INTEGER NOT NULL,
+  duration_min INTEGER,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (creator_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS transactions (

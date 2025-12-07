@@ -2,6 +2,13 @@ import { Telegraf, session, Markup } from 'telegraf';
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Config obligatoria
+const { BOT_TOKEN, ADMIN_IDS: adminIdsRaw } = process.env;
+if (!BOT_TOKEN) {
+  console.error('Falta BOT_TOKEN en el entorno. Define BOT_TOKEN antes de lanzar el bot.');
+  process.exit(1);
+}
+
 import {
   findOrCreateUser,
   updateUserRole,
@@ -26,8 +33,8 @@ import {
   getServiceById,
 } from './db.js';
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
-const ADMIN_IDS = (process.env.ADMIN_IDS || '')
+const bot = new Telegraf(BOT_TOKEN);
+const ADMIN_IDS = (adminIdsRaw || '')
   .split(',')
   .map(id => id.trim())
   .filter(Boolean);
