@@ -2089,6 +2089,13 @@ app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
 
+console.log('--- DEBUG LOGS ---');
+console.log(`USE_WEBHOOK: ${USE_WEBHOOK}`);
+console.log(`WEBHOOK_DOMAIN: ${WEBHOOK_DOMAIN}`);
+console.log(`WEBHOOK_PATH: ${WEBHOOK_PATH}`);
+console.log(`WEBHOOK_URL: ${WEBHOOK_URL}`);
+console.log('--------------------');
+
 startBot();
 
 // Enable graceful stop
