@@ -2013,6 +2013,13 @@ async function startBot() {
       console.error('No pude configurar webhook', err.message);
     }
   } else {
+    // Asegura que no haya webhook activo si usamos polling
+    try {
+      await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+      console.log('Webhook eliminado, iniciando polling');
+    } catch (err) {
+      console.error('No pude eliminar webhook', err.message);
+    }
     bot.launch().then(() => {
       console.log('Bot iniciado en modo long polling');
       remindStalePendingOrders().catch(err =>
