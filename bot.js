@@ -485,6 +485,7 @@ const WEBHOOK_DOMAIN =
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_PATH = `/bot${process.env.BOT_TOKEN}`;
 const WEBHOOK_URL = WEBHOOK_DOMAIN ? `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}` : null;
+const FORCE_POLLING = process.env.FORCE_POLLING === 'true';
 const fullTermsText = `
 TÉRMINOS DE USO DE LA PLATAFORMA
 
@@ -2013,7 +2014,7 @@ setInterval(() => {
 }, REMINDER_INTERVAL_MS);
 
 async function startBot() {
-  if (USE_WEBHOOK && WEBHOOK_URL) {
+  if (!FORCE_POLLING && USE_WEBHOOK && WEBHOOK_URL) {
     try {
       await bot.telegram.setWebhook(WEBHOOK_URL, { drop_pending_updates: true });
       console.log('Webhook configurado en', WEBHOOK_URL);
