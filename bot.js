@@ -80,6 +80,13 @@ bot.use((ctx, next) => {
   return next();
 });
 
+bot.command('app', (ctx) => {
+    const url = `${WEBHOOK_DOMAIN}/webapp/index.html`;
+    return ctx.reply('Launch the web app:', Markup.keyboard([
+        Markup.button.webApp('Open Web App', url)
+    ]).resize());
+});
+
 // Bloqueo por términos no aceptados
 bot.use(async (ctx, next) => {
   const data = ctx.callbackQuery?.data;
@@ -2064,7 +2071,7 @@ async function startBot() {
 
 const app = express();
 app.use(express.json());
-app.use('/webapp', express.static(path.join(process.cwd(), 'webapp')));
+app.use('/webapp', express.static(path.join(process.cwd(), 'webapp', 'dist')));
 app.get('/', (_req, res) => res.send('OK'));
 app.get('/health', (_req, res) =>
   res.json({
