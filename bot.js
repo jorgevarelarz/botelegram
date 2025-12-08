@@ -472,7 +472,9 @@ const FEE_FLAT_CENTS = parseInt(process.env.FEE_FLAT_CENTS || '30', 10);
 const DEFAULT_CURRENCY = process.env.DEFAULT_CURRENCY || 'EUR';
 const PAYMENT_PROVIDER_TOKEN_EUR = process.env.PAYMENT_PROVIDER_TOKEN_EUR || '';
 const PAYMENT_PROVIDER_TOKEN_USD = process.env.PAYMENT_PROVIDER_TOKEN_USD || '';
-const USE_WEBHOOK = process.env.USE_WEBHOOK === 'true';
+const USE_WEBHOOK =
+  process.env.USE_WEBHOOK?.toLowerCase() === 'true' ||
+  (!process.env.USE_WEBHOOK && !!process.env.RAILWAY_PUBLIC_DOMAIN);
 const WEBHOOK_DOMAIN = process.env.WEBHOOK_DOMAIN || process.env.RAILWAY_PUBLIC_DOMAIN || '';
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_PATH = `/bot${process.env.BOT_TOKEN}`;
@@ -2007,7 +2009,7 @@ setInterval(() => {
 async function startBot() {
   if (USE_WEBHOOK && WEBHOOK_URL) {
     try {
-      await bot.telegram.setWebhook(WEBHOOK_URL);
+      await bot.telegram.setWebhook(WEBHOOK_URL, { drop_pending_updates: true });
       console.log('Webhook configurado en', WEBHOOK_URL);
     } catch (err) {
       console.error('No pude configurar webhook', err.message);
@@ -2048,7 +2050,11 @@ const app = express();
 app.use(express.json());
 app.use('/webapp', express.static(path.join(process.cwd(), 'webapp')));
 app.get('/health', (_req, res) =>
-  res.json({ ok: true, mode: USE_WEBHOOK ? 'webhook' : 'polling' })
+  res.json({
+    ok: true,
+    mode: USE_WEBHOOK ? 'webhook' : 'polling',
+    webhookUrl: USE_WEBHOOK ? WEBHOOK_URL : null,
+  })
 );
 
 if (USE_WEBHOOK && WEBHOOK_PATH) {
