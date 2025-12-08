@@ -4,11 +4,15 @@
   "main": "bot.js",
   "type": "module",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "test": "vitest"
   },
   "dependencies": {
-    "better-sqlite3": "^9.0.0",
+    "better-sqlite3": "^12.5.0",
     "dotenv": "^16.4.0",
     "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0"
   }
 }
