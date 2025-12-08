@@ -475,7 +475,13 @@ const PAYMENT_PROVIDER_TOKEN_USD = process.env.PAYMENT_PROVIDER_TOKEN_USD || '';
 const USE_WEBHOOK =
   process.env.USE_WEBHOOK?.toLowerCase() === 'true' ||
   (!process.env.USE_WEBHOOK && !!process.env.RAILWAY_PUBLIC_DOMAIN);
-const WEBHOOK_DOMAIN = process.env.WEBHOOK_DOMAIN || process.env.RAILWAY_PUBLIC_DOMAIN || '';
+const WEBHOOK_DOMAIN_RAW = process.env.WEBHOOK_DOMAIN || process.env.RAILWAY_PUBLIC_DOMAIN || '';
+const WEBHOOK_DOMAIN =
+  WEBHOOK_DOMAIN_RAW && WEBHOOK_DOMAIN_RAW.startsWith('http')
+    ? WEBHOOK_DOMAIN_RAW
+    : WEBHOOK_DOMAIN_RAW
+    ? `https://${WEBHOOK_DOMAIN_RAW}`
+    : '';
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_PATH = `/bot${process.env.BOT_TOKEN}`;
 const WEBHOOK_URL = WEBHOOK_DOMAIN ? `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}` : null;
