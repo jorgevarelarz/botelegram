@@ -2055,6 +2055,7 @@ async function startBot() {
 const app = express();
 app.use(express.json());
 app.use('/webapp', express.static(path.join(process.cwd(), 'webapp')));
+app.get('/', (_req, res) => res.send('OK'));
 app.get('/health', (_req, res) =>
   res.json({
     ok: true,
