@@ -1,4 +1,6 @@
 import { Telegraf, session, Markup } from 'telegraf';
+import express from 'express';
+import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -470,6 +472,11 @@ const FEE_FLAT_CENTS = parseInt(process.env.FEE_FLAT_CENTS || '30', 10);
 const DEFAULT_CURRENCY = process.env.DEFAULT_CURRENCY || 'EUR';
 const PAYMENT_PROVIDER_TOKEN_EUR = process.env.PAYMENT_PROVIDER_TOKEN_EUR || '';
 const PAYMENT_PROVIDER_TOKEN_USD = process.env.PAYMENT_PROVIDER_TOKEN_USD || '';
+const USE_WEBHOOK = process.env.USE_WEBHOOK === 'true';
+const WEBHOOK_DOMAIN = process.env.WEBHOOK_DOMAIN || '';
+const PORT = process.env.PORT || 3000;
+const WEBHOOK_PATH = `/bot${process.env.BOT_TOKEN}`;
+const WEBHOOK_URL = WEBHOOK_DOMAIN ? `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}` : null;
 const fullTermsText = `
 TÉRMINOS DE USO DE LA PLATAFORMA
 
@@ -1973,7 +1980,7 @@ bot.on('successful_payment', async ctx => {
   );
 });
 
-// ---------- Lanzar bot ----------
+// ---------- Lanzar bot / servidor ----------
 
 // Recordatorios periódicos de pedidos pendientes con saldo bloqueado
 setInterval(() => {
@@ -1997,27 +2004,55 @@ setInterval(() => {
   }
 }, REMINDER_INTERVAL_MS);
 
-bot.launch().then(() => {
-  console.log('Bot iniciado');
-  remindStalePendingOrders().catch(err =>
-    console.error('Error en recordatorio inicial de pedidos pendientes', err)
-  );
-  const expired = listExpiredPendingOrders();
-  if (expired.length) {
-    for (const order of expired) {
-      expirePendingOrder(order.id);
-      const client = getUserById(order.client_id);
-      if (client && hasValidTelegramId(client)) {
-        bot.telegram
-          .sendMessage(
-            client.telegram_id,
-            `Tu pedido #${order.id} ha caducado tras ${PENDING_EXPIRATION_MINUTES} minutos sin ser aceptado.`
-          )
-          .catch(() => {});
-      }
+async function startBot() {
+  if (USE_WEBHOOK && WEBHOOK_URL) {
+    try {
+      await bot.telegram.setWebhook(WEBHOOK_URL);
+      console.log('Webhook configurado en', WEBHOOK_URL);
+    } catch (err) {
+      console.error('No pude configurar webhook', err.message);
     }
+  } else {
+    bot.launch().then(() => {
+      console.log('Bot iniciado en modo long polling');
+      remindStalePendingOrders().catch(err =>
+        console.error('Error en recordatorio inicial de pedidos pendientes', err)
+      );
+      const expired = listExpiredPendingOrders();
+      if (expired.length) {
+        for (const order of expired) {
+          expirePendingOrder(order.id);
+          const client = getUserById(order.client_id);
+          if (client && hasValidTelegramId(client)) {
+            bot.telegram
+              .sendMessage(
+                client.telegram_id,
+                `Tu pedido #${order.id} ha caducado tras ${PENDING_EXPIRATION_MINUTES} minutos sin ser aceptado/pagado.`
+              )
+              .catch(() => {});
+          }
+        }
+      }
+    });
   }
+}
+
+const app = express();
+app.use(express.json());
+app.use('/webapp', express.static(path.join(process.cwd(), 'webapp')));
+app.get('/health', (_req, res) =>
+  res.json({ ok: true, mode: USE_WEBHOOK ? 'webhook' : 'polling' })
+);
+
+if (USE_WEBHOOK && WEBHOOK_PATH) {
+  app.post(WEBHOOK_PATH, bot.webhookCallback(WEBHOOK_PATH));
+}
+
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });
+
+startBot();
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
