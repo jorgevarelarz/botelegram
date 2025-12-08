@@ -1,4 +1,4 @@
 node_modules
-.env
 bot.log
 database.db
+.env

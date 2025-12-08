@@ -5,9 +5,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Config obligatoria
-const { BOT_TOKEN, ADMIN_IDS: adminIdsRaw } = process.env;
+const { BOT_TOKEN, ADMIN_IDS: adminIdsRaw, WEBHOOK_SECRET } = process.env;
 if (!BOT_TOKEN) {
   console.error('Falta BOT_TOKEN en el entorno. Define BOT_TOKEN antes de lanzar el bot.');
+  process.exit(1);
+}
+if (process.env.USE_WEBHOOK?.toLowerCase() === 'true' && !WEBHOOK_SECRET) {
+  console.error('Falta WEBHOOK_SECRET en el entorno. Define WEBHOOK_SECRET para el webhook.');
   process.exit(1);
 }
 
@@ -52,6 +56,11 @@ import {
 } from './db.js';
 
 const bot = new Telegraf(BOT_TOKEN);
+
+bot.catch((err, ctx) => {
+  console.error(`Ooops, encountered an error for ${ctx.updateType}`, err)
+});
+
 const ADMIN_IDS = (adminIdsRaw || '')
   .split(',')
   .map(id => id.trim())
@@ -483,7 +492,7 @@ const WEBHOOK_DOMAIN =
     ? `https://${WEBHOOK_DOMAIN_RAW}`
     : '';
 const PORT = process.env.PORT || 3000;
-const WEBHOOK_PATH = `/bot${process.env.BOT_TOKEN}`;
+const WEBHOOK_PATH = `/bot${process.env.WEBHOOK_SECRET}`;
 const WEBHOOK_URL = WEBHOOK_DOMAIN ? `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}` : null;
 const FORCE_POLLING = process.env.FORCE_POLLING === 'true';
 const fullTermsText = `
@@ -2066,7 +2075,7 @@ app.get('/health', (_req, res) =>
 );
 
 if (USE_WEBHOOK && WEBHOOK_PATH) {
-  app.post(WEBHOOK_PATH, bot.webhookCallback(WEBHOOK_PATH));
+  app.use(bot.webhookCallback(WEBHOOK_PATH));
 }
 
 app.listen(PORT, () => {
