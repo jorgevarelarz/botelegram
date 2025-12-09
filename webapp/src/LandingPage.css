@@ -1,0 +1,229 @@
+:root {
+  --primary-color: #0f8bff;
+  --accent-color: #ff9f45;
+  --dark-color: #0a1c2f;
+  --muted-color: #5f7088;
+  --light-color: #ffffff;
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+}
+
+.landing-container {
+  font-family: var(--font-family);
+  color: var(--dark-color);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 20%, rgba(15, 139, 255, 0.12), transparent 35%),
+    radial-gradient(circle at 80% 0%, rgba(255, 159, 69, 0.16), transparent 30%),
+    #f4f7fb;
+}
+
+.landing-header {
+  background: var(--light-color);
+  color: var(--dark-color);
+  padding: 2rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(10, 28, 47, 0.08);
+}
+
+.landing-header h1 {
+  margin: 0;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.landing-header p {
+  margin: 0.5rem 0 0;
+  font-size: 1.1rem;
+  color: var(--muted-color);
+}
+
+.landing-main {
+  flex: 1;
+  padding: 2rem 1.25rem 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+section {
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: var(--card-bg);
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(10, 28, 47, 0.08);
+  border: 1px solid rgba(10, 28, 47, 0.05);
+  backdrop-filter: blur(6px);
+}
+
+section h2,
+section h3 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero {
+  text-align: center;
+}
+
+.hero .tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem;
+  background: rgba(15, 139, 255, 0.1);
+  color: var(--primary-color);
+  border: 1px solid rgba(15, 139, 255, 0.2);
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-size: 0.9rem;
+  margin: 0 auto 1rem;
+  width: fit-content;
+}
+
+.hero h2 {
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  font-size: 1.05rem;
+  margin-bottom: 1.75rem;
+  line-height: 1.6;
+  color: var(--muted-color);
+}
+
+.cta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(120deg, var(--primary-color), #0f6fe6);
+  color: var(--light-color);
+  padding: 0.95rem 2.6rem;
+  border-radius: 14px;
+  text-decoration: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 15px 40px rgba(15, 111, 230, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
+}
+
+.cta-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 50px rgba(15, 111, 230, 0.35);
+}
+
+.hint {
+  margin-top: 0.75rem;
+  color: var(--muted-color);
+  font-size: 0.95rem;
+}
+
+.features .feature-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.3rem;
+  margin-top: 1.5rem;
+}
+
+.features .card {
+  background: #0a1c2f;
+  color: #eaf2ff;
+  padding: 1.6rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.features .card h4 {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.features .card p {
+  margin-bottom: 0;
+  line-height: 1.5;
+  color: rgba(234, 242, 255, 0.85);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(255, 159, 69, 0.14);
+  color: var(--accent-color);
+  border: 1px solid rgba(255, 159, 69, 0.3);
+}
+
+.how-it-works .steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  text-align: center;
+}
+
+.how-it-works .step {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1.5rem 1rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(15, 139, 255, 0.25);
+}
+
+.how-it-works .step span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(15, 139, 255, 0.12);
+  color: var(--primary-color);
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(15, 139, 255, 0.3);
+}
+
+.how-it-works .step p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--muted-color);
+}
+
+.landing-footer {
+  background: var(--dark-color);
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  padding: 1.5rem 1rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 640px) {
+  .landing-header h1 {
+    font-size: 2.1rem;
+  }
+
+  section {
+    padding: 1.5rem;
+  }
+
+  .cta-button {
+    width: 100%;
+  }
+}

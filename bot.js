@@ -2071,8 +2071,13 @@ async function startBot() {
 
 const app = express();
 app.use(express.json());
-app.use('/webapp', express.static(path.join(process.cwd(), 'webapp', 'dist')));
-app.get('/', (_req, res) => res.send('OK'));
+
+const webappPath = path.join(process.cwd(), 'webapp', 'dist');
+app.use('/webapp', express.static(webappPath));
+app.use(express.static(webappPath));
+
+app.get('/', (_req, res) => res.sendFile(path.join(webappPath, 'index.html')));
+app.get('/webapp/*', (_req, res) => res.sendFile(path.join(webappPath, 'index.html')));
 app.get('/health', (_req, res) =>
   res.json({
     ok: true,
