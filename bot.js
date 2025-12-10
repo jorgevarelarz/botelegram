@@ -2087,8 +2087,8 @@ app.get('/health', (_req, res) =>
 );
 
 if (USE_WEBHOOK && WEBHOOK_PATH) {
-  // Monta el webhook solo en su ruta específica para no interceptar "/"
-  app.use(WEBHOOK_PATH, bot.webhookCallback(WEBHOOK_PATH));
+  // Express deja pasar solo las peticiones al path del webhook
+  app.use(bot.webhookCallback(WEBHOOK_PATH));
 }
 
 app.listen(PORT, () => {
