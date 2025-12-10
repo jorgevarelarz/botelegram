@@ -1,6 +1,7 @@
 import { Telegraf, session, Markup } from 'telegraf';
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -209,6 +210,7 @@ async function promptOrderDetails(ctx, service, flow) {
     serviceId: service.id,
     serviceName: service.name,
     serviceType: service.type,
+    durationMin: service.duration_min,
     amountCents: service.price_cents,
   };
 
@@ -250,6 +252,7 @@ async function finalizeOrder(ctx, descriptionText) {
     feeCents,
     totalCents,
   });
+  updateOrder(order.id, { creator_id: flow.creatorId });
 
   ctx.session.newOrder = null;
 
@@ -478,6 +481,95 @@ function statusLabel(status) {
   return status;
 }
 
+function verifyWebAppInitData(initDataRaw) {
+  if (!initDataRaw || !BOT_TOKEN) return null;
+  const parsed = new URLSearchParams(initDataRaw);
+  const hash = parsed.get('hash');
+  if (!hash) return null;
+  parsed.delete('hash');
+  const dataCheckString = Array.from(parsed.entries())
+    .map(([k, v]) => `${k}=${v}`)
+    .sort()
+    .join('\n');
+  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
+  const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+  if (hmac !== hash) return null;
+  const userString = parsed.get('user');
+  if (!userString) return null;
+  try {
+    return JSON.parse(userString);
+  } catch {
+    return null;
+  }
+}
+
+function getWebAppContext(req) {
+  const initData = (req.headers['x-telegram-init-data'] || req.body?.initData || '').trim();
+  let tgUser = verifyWebAppInitData(initData);
+
+  if (!tgUser && ALLOW_INSECURE_WEBAPP) {
+    const debugId =
+      req.headers['x-debug-telegram-id'] || req.query?.debugTelegramId || req.body?.debugTelegramId;
+    if (debugId) {
+      tgUser = {
+        id: String(debugId),
+        username: 'debug_user',
+        first_name: 'Debug',
+        last_name: 'User',
+      };
+    }
+  }
+
+  if (!tgUser) return null;
+
+  const dbUser = findOrCreateUser({
+    telegramId: tgUser.id,
+    username: tgUser.username || null,
+  });
+  touchLastSeen(dbUser.id);
+
+  return { tgUser, dbUser };
+}
+
+function publicUser(u) {
+  if (!u) return null;
+  return {
+    id: u.id,
+    telegramId: u.telegram_id,
+    username: u.username,
+    role: u.role,
+    displayName: u.display_name || null,
+    balanceCents: u.balance_cents,
+    isAvailable: !!u.is_available,
+    creatorStatus: u.creator_status || null,
+    acceptedTermsAt: u.accepted_terms_at || null,
+  };
+}
+
+function serializeOrder(order) {
+  if (!order) return null;
+  const creator = order.creator_id ? getUserById(order.creator_id) : null;
+  const client = order.client_id ? getUserById(order.client_id) : null;
+  const fee = order.fee_cents || 0;
+  const total = order.total_cents || order.amount_cents + fee;
+  return {
+    id: order.id,
+    status: order.status,
+    statusLabel: statusLabel(order.status),
+    description: order.description || '',
+    amountCents: order.amount_cents,
+    feeCents: fee,
+    totalCents: total,
+    etaMinutes: order.eta_minutes || null,
+    currency: order.currency || DEFAULT_CURRENCY,
+    createdAt: order.created_at,
+    creator: creator ? { id: creator.id, name: creatorLabel(creator) } : null,
+    client: client
+      ? { id: client.id, name: client.display_name || client.username || client.telegram_id }
+      : null,
+  };
+}
+
 const CREATOR_ONLINE_COOLDOWN_MINUTES = 10;
 const PENDING_REMINDER_THRESHOLD_MINUTES = 30;
 const REMINDER_INTERVAL_MS = 5 * 60 * 1000;
@@ -502,6 +594,7 @@ const PORT = process.env.PORT || 3000;
 const WEBHOOK_PATH = `/bot${process.env.WEBHOOK_SECRET}`;
 const WEBHOOK_URL = WEBHOOK_DOMAIN ? `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}` : null;
 const FORCE_POLLING = process.env.FORCE_POLLING === 'true';
+const ALLOW_INSECURE_WEBAPP = process.env.ALLOW_INSECURE_WEBAPP === 'true';
 const fullTermsText = `
 TÉRMINOS DE USO DE LA PLATAFORMA
 
@@ -1396,6 +1489,9 @@ bot.action(/accept_order:(\d+)/, async ctx => {
   if (order.status !== 'pending') {
     return ctx.answerCbQuery('Este pedido ya fue aceptado por otra creadora.');
   }
+  if (order.creator_id && order.creator_id !== user.id) {
+    return ctx.answerCbQuery('Este pedido está asignado a otra creadora.');
+  }
 
   // Intentar cobrar al cliente en el momento de la aceptación
   const client = getUserById(order.client_id);
@@ -2085,6 +2181,123 @@ app.get('/health', (_req, res) =>
     webhookUrl: USE_WEBHOOK ? WEBHOOK_URL : null,
   })
 );
+
+app.post('/api/session', (req, res) => {
+  const ctx = getWebAppContext(req);
+  if (!ctx) return res.status(401).json({ ok: false, error: 'invalid_init_data' });
+  const { tgUser, dbUser } = ctx;
+  return res.json({
+    ok: true,
+    user: publicUser(dbUser),
+    telegram: {
+      id: tgUser.id,
+      username: tgUser.username || null,
+      firstName: tgUser.first_name || null,
+      lastName: tgUser.last_name || null,
+    },
+  });
+});
+
+app.post('/api/terms/accept', (req, res) => {
+  const ctx = getWebAppContext(req);
+  if (!ctx) return res.status(401).json({ ok: false, error: 'invalid_init_data' });
+  markUserAcceptedTerms(ctx.dbUser.id);
+  return res.json({ ok: true });
+});
+
+app.get('/api/creators', (_req, res) => {
+  const creators = getCreators({ onlyAvailable: false }).map(c => ({
+    id: c.id,
+    name: creatorLabel(c),
+    username: c.username,
+    isAvailable: !!c.is_available,
+    status: c.creator_status || null,
+    services: listServicesByCreator(c.id).map(s => ({
+      id: s.id,
+      name: s.name,
+      priceCents: s.price_cents,
+      type: s.type,
+      durationMin: s.duration_min,
+      isActive: !!s.is_active,
+    })),
+  }));
+  return res.json({ ok: true, creators });
+});
+
+app.get('/api/orders', (req, res) => {
+  const ctx = getWebAppContext(req);
+  if (!ctx) return res.status(401).json({ ok: false, error: 'invalid_init_data' });
+  const orders = listUserOrders(ctx.dbUser.id, ctx.dbUser.role, 20).map(o => serializeOrder(o));
+  return res.json({ ok: true, orders });
+});
+
+app.post('/api/orders', async (req, res) => {
+  const ctx = getWebAppContext(req);
+  if (!ctx) return res.status(401).json({ ok: false, error: 'invalid_init_data' });
+  const user = ctx.dbUser;
+  if (user.role !== 'client') {
+    return res.status(403).json({ ok: false, error: 'solo_clientes' });
+  }
+  if (!user.accepted_terms_at) {
+    return res.status(403).json({ ok: false, error: 'terms_required' });
+  }
+  const serviceId = parseInt(req.body?.serviceId, 10);
+  if (!serviceId) {
+    return res.status(400).json({ ok: false, error: 'service_required' });
+  }
+  const service = getServiceById(serviceId);
+  if (!service || !service.is_active) {
+    return res.status(404).json({ ok: false, error: 'service_not_found' });
+  }
+  const creator = getUserById(service.creator_id);
+  if (!creator) {
+    return res.status(400).json({ ok: false, error: 'creator_not_found' });
+  }
+
+  const descriptionRaw = req.body?.description || '';
+  const extra = descriptionRaw.trim() ? ` – ${descriptionRaw.trim()}` : '';
+  const fullDescription = `${service.name}${extra}`;
+  const expiresAt = new Date(Date.now() + PENDING_EXPIRATION_MINUTES * 60 * 1000).toISOString();
+  const feeCents = Math.round(service.price_cents * FEE_PERCENT) + FEE_FLAT_CENTS;
+  const totalCents = service.price_cents + feeCents;
+  const currency = DEFAULT_CURRENCY;
+
+  const order = createOrder({
+    clientId: user.id,
+    amountCents: service.price_cents,
+    description: fullDescription,
+    type: service.type || null,
+    etaMinutes: service.duration_min || null,
+    expiresAt,
+    currency,
+    feeCents,
+    totalCents,
+  });
+
+  updateOrder(order.id, { creator_id: creator.id });
+
+  // Avisar a la creadora asignada
+  if (creator && hasValidTelegramId(creator)) {
+    const text =
+      `Nuevo pedido asignado 🔔\n\n` +
+      `ID: #${order.id}\n` +
+      `Servicio: ${service.name}\n` +
+      `Descripción: ${fullDescription}\n` +
+      `Importe: ${formatCents(order.amount_cents)}\n\n` +
+      `Pulsa el botón para aceptar.`;
+    try {
+      await bot.telegram.sendMessage(
+        creator.telegram_id,
+        text,
+        Markup.inlineKeyboard([[Markup.button.callback('✅ Aceptar', `accept_order:${order.id}`)]])
+      );
+    } catch (err) {
+      console.error('Error avisando a creadora (webapp)', creator.telegram_id, err.message);
+    }
+  }
+
+  return res.json({ ok: true, order: serializeOrder(getOrderById(order.id)) });
+});
 
 if (USE_WEBHOOK && WEBHOOK_PATH) {
   // Express deja pasar solo las peticiones al path del webhook
